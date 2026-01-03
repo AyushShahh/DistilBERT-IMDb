@@ -4,7 +4,7 @@ from huggingface_hub import PyTorchModelHubMixin
 
 
 class DistilBERTClassifier(nn.Module, PyTorchModelHubMixin):
-    def __init__(self, distilbert_model="ayushshah/distilbert-base-uncased-imdb-english", num_labels=2):
+    def __init__(self, distilbert_model="ayushshah/distilbert-base-uncased-imdb-dapt", num_labels=2):
         super(DistilBERTClassifier, self).__init__()
 
         self.distilbert = DistilBertModel.from_pretrained(distilbert_model)

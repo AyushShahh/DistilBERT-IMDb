@@ -82,7 +82,7 @@ def main():
         print(f"Epoch {epoch+1} completed. Average Loss: {avg_loss:.4f}")
 
     # Save the domain-adapted model
-    model.save_pretrained('distilbert-base-uncased-imdb-english')
+    model.save_pretrained('distilbert-base-uncased-imdb-dapt')
 
 if __name__ == "__main__":
     main()
