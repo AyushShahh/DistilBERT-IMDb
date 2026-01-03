@@ -1,9 +1,7 @@
 import torch
-from torch.utils.data import DataLoader
-from transformers import DataCollatorWithPadding
 from transformers import DistilBertForMaskedLM
 from utils.mlm import MaskedLanguageModeling
-from utils.dataset import IMDbReviews
+from utils.dataset import IMDbReviewsDataLoader
 from torch.amp import autocast, GradScaler
 from tqdm import tqdm
 
@@ -11,18 +9,12 @@ from tqdm import tqdm
 def main():
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    data = IMDbReviews(split='unsupervised')
-    collator = DataCollatorWithPadding(
-        tokenizer=data.tokenizer,
-        return_tensors="pt"
-    )
-    dataloader = DataLoader(
-        dataset=data,
+    dataloader = IMDbReviewsDataLoader(
+        split='unsupervised',
         batch_size=16,
         shuffle=True,
         num_workers=2,
         pin_memory=True,
-        collate_fn=collator
     )
 
     EPOCHS = 3
@@ -40,7 +32,7 @@ def main():
     model = DistilBertForMaskedLM.from_pretrained('distilbert-base-uncased').to(DEVICE)
     optimizer = torch.optim.AdamW(model.parameters(), lr=3e-5)
     scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
-    mlm = MaskedLanguageModeling(tokenizer=data.tokenizer)
+    mlm = MaskedLanguageModeling(tokenizer=dataloader.dataset.tokenizer)
 
     scaler = GradScaler()
     optimizer.zero_grad(set_to_none=True)

@@ -1,6 +1,6 @@
 import torch
-from torch.utils.data import Dataset
-from transformers import DistilBertTokenizer
+from torch.utils.data import Dataset, DataLoader
+from transformers import DistilBertTokenizer, DataCollatorWithPadding
 from datasets import load_dataset
 
 
@@ -30,3 +30,24 @@ class IMDbReviews(Dataset):
         item = {key: val.squeeze(0) for key, val in encoding.items()}
         item['labels'] = torch.tensor(label, dtype=torch.long)
         return item
+
+
+class IMDbReviewsDataLoader(DataLoader):
+    def __init__(self, split, dataset=None, batch_size=8, shuffle=True, num_workers=2, pin_memory=True, **kwargs):
+        if dataset is None:
+            self.dataset = IMDbReviews(split=split)
+        else:
+            self.dataset = dataset
+        self.collator = DataCollatorWithPadding(
+            tokenizer=self.dataset.tokenizer,
+            return_tensors="pt"
+        )
+        super(IMDbReviewsDataLoader, self).__init__(
+            self.dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
+            num_workers=num_workers,
+            pin_memory=pin_memory,
+            collate_fn=self.collator,
+            **kwargs
+        )
