@@ -40,6 +40,7 @@ class IMDbReviewsDataLoader(DataLoader):
             self.dataset = dataset
         self.collator = DataCollatorWithPadding(
             tokenizer=self.dataset.tokenizer,
+            pad_to_multiple_of=8,
             return_tensors="pt"
         )
         super(IMDbReviewsDataLoader, self).__init__(
