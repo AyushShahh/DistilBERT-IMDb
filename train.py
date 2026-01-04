@@ -2,7 +2,7 @@ import os
 import torch
 from torch.utils.data import random_split
 from utils.dataset import IMDbReviewsDataLoader, IMDbReviews
-from utils.architecture import DistilBERTClassifier
+from utils.model import DistilBERTClassifier
 from torch.amp import autocast, GradScaler
 from tqdm import tqdm
 import json
