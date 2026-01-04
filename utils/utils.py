@@ -1,0 +1,14 @@
+import torch
+import random
+import numpy as np
+
+def setup(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.set_float32_matmul_precision('high')
+        torch.backends.cudnn.benchmark = False
+

@@ -9,9 +9,12 @@ from tqdm import tqdm
 from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score, confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 import json
+from utils.utils import setup
 
 
 def main():
+    setup(23)
+
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
     BATCH_SIZE = 64
 
@@ -21,6 +24,7 @@ def main():
         shuffle=True,
         num_workers=2,
         pin_memory=True,
+        persistent_workers=True
     )
 
     test_dataset = IMDbReviews(split='test')
@@ -29,10 +33,12 @@ def main():
     generator = torch.Generator().manual_seed(23)
     val_dataset, test_dataset = random_split(test_dataset, [val_size, test_size], generator=generator)
 
-    valloader = IMDbReviewsDataLoader(dataset=val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2, pin_memory=True)
-    testloader = IMDbReviewsDataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2, pin_memory=True)
-
+    valloader = IMDbReviewsDataLoader(dataset=val_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2, pin_memory=True, persistent_workers=True)
+    testloader = IMDbReviewsDataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=2, pin_memory=True, persistent_workers=True)
+    
     EPOCHS = 3
+    ROOT = 'assets'
+    os.makedirs(ROOT, exist_ok=True)
 
     num_train_steps = len(trainloader) * EPOCHS
     warmup_steps = int(0.1 * num_train_steps)
@@ -60,11 +66,7 @@ def main():
         'train_loss': [],
         'train_acc': [],
         'val_loss': [],
-        'val_acc': [],
-        'avg_train_loss': [],
-        'avg_val_loss': [],
-        'avg_train_acc': [],
-        'avg_val_acc': []
+        'val_acc': []
     }
 
     for epoch in range(EPOCHS):
@@ -94,19 +96,20 @@ def main():
             scaler.update()
             scheduler.step()
 
-            epoch_loss += loss.item()
+            batch_size = labels.size(0)
+            epoch_loss += loss.item() * batch_size
             preds = torch.argmax(logits, dim=1)
             correct = (preds == labels).sum().item()
             train_correct += correct
-            train_total += labels.size(0)
+            train_total += batch_size
 
-            history['train_loss'].append(loss.item())
-            history['train_acc'].append(correct / labels.size(0))
+            history['train_loss'].append(epoch_loss / train_total)
+            history['train_acc'].append(train_correct / train_total)
 
-            progress_bar.set_postfix(loss=loss.item(), acc=correct / labels.size(0))
+            progress_bar.set_postfix(loss=loss.item(), acc=correct / batch_size)
 
-        avg_train_loss = epoch_loss / len(trainloader)
-        train_acc = train_correct / train_total
+        avg_train_loss = history['train_loss'][-1]
+        train_acc = history['train_acc'][-1]
 
         # Validation
         model.eval()
@@ -125,35 +128,29 @@ def main():
                     logits = model(input_ids, attention_mask)
                     loss = criterion(logits, labels)
 
-                val_loss += loss.item()
+                batch_size = labels.size(0)
+                val_loss += loss.item() * batch_size
                 preds = torch.argmax(logits, dim=1)
                 c = (preds == labels).sum().item()
                 correct += c
-                total += labels.size(0)
+                total += batch_size
 
-                loop.set_postfix(loss=loss.item(), acc=c / labels.size(0))
+                loop.set_postfix(loss=loss.item(), acc=c / batch_size)
 
-                history['val_loss'].append(loss.item())
-                history['val_acc'].append(c / labels.size(0))
+                history['val_loss'].append(val_loss / total)
+                history['val_acc'].append(correct/total)
 
-        avg_val_loss = val_loss / len(valloader)
-        val_acc = correct / total
-
-        # Save to history
-        history['avg_train_loss'].append(avg_train_loss)
-        history['avg_train_acc'].append(train_acc)
-        history['avg_val_loss'].append(avg_val_loss)
-        history['avg_val_acc'].append(val_acc)
+        avg_val_loss = history['val_loss'][-1]
+        val_acc = history['val_acc'][-1]
 
         print(f"Epoch {epoch+1} | Train Loss: {avg_train_loss:.4f} | Train Acc: {train_acc:.4f} | Val Loss: {avg_val_loss:.4f} | Val Acc: {val_acc:.4f}")
 
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            os.makedirs('assets', exist_ok=True)
-            torch.save(model.state_dict(), 'assets/best_model.pt')
+            torch.save(model.state_dict(), f'{ROOT}/best_model.pt')
 
     # Save loss history to JSON
-    with open('assets/training_history.json', 'w') as f:
+    with open(f'{ROOT}/training_history.json', 'w') as f:
         json.dump(history, f, indent=2)
 
     # Plot and save loss curves
@@ -174,11 +171,11 @@ def main():
     axes[1].legend()
 
     plt.tight_layout()
-    plt.savefig('assets/training_curves.png', dpi=150)
+    plt.savefig(f'{ROOT}/training_curves.png', dpi=150)
     plt.show()
 
     # Final evaluation on test set
-    model.load_state_dict(torch.load('assets/best_model.pt'))
+    model.load_state_dict(torch.load(f'{ROOT}/best_model.pt'))
     model.eval()
 
     all_preds = []
@@ -223,7 +220,7 @@ def main():
         'recall': test_recall,
         'roc_auc': test_roc_auc
     }
-    with open('assets/test_metrics.json', 'w') as f:
+    with open(f'{ROOT}/test_metrics.json', 'w') as f:
         json.dump(test_metrics, f, indent=2)
 
     # Confusion matrix
@@ -233,7 +230,7 @@ def main():
     disp.plot(ax=ax, cmap='Blues')
     plt.title('Confusion Matrix')
     plt.tight_layout()
-    plt.savefig('assets/confusion_matrix.png', dpi=150)
+    plt.savefig(f'{ROOT}/confusion_matrix.png', dpi=150)
     plt.show()
 
 

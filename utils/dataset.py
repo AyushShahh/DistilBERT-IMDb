@@ -33,7 +33,7 @@ class IMDbReviews(Dataset):
 
 
 class IMDbReviewsDataLoader(DataLoader):
-    def __init__(self, split, dataset=None, batch_size=8, shuffle=True, num_workers=2, pin_memory=True, **kwargs):
+    def __init__(self, split, dataset=None, batch_size=8, shuffle=True, num_workers=2, pin_memory=True, persistent_workers=False, **kwargs):
         if dataset is None:
             self.dataset = IMDbReviews(split=split)
         else:
@@ -49,5 +49,6 @@ class IMDbReviewsDataLoader(DataLoader):
             num_workers=num_workers,
             pin_memory=pin_memory,
             collate_fn=self.collator,
+            persistent_workers=persistent_workers,
             **kwargs
         )

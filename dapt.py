@@ -4,9 +4,11 @@ from utils.mlm import MaskedLanguageModeling
 from utils.dataset import IMDbReviewsDataLoader
 from torch.amp import autocast, GradScaler
 from tqdm import tqdm
+from utils.utils import setup
 
 
 def main():
+    setup(23)
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     dataloader = IMDbReviewsDataLoader(
@@ -15,6 +17,7 @@ def main():
         shuffle=True,
         num_workers=2,
         pin_memory=True,
+        persistent_workers=True
     )
 
     EPOCHS = 3
