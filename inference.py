@@ -4,7 +4,7 @@ from transformers import AutoTokenizer
 from huggingface_hub import hf_hub_download
 from safetensors.torch import load_file as safe_load_file
 
-REPO_ID = "ayushshah/distilbert-imdb"
+REPO_ID = "ayushshah/distilbert-dapt-imdb-sentiment"
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 model = DistilBERTClassifier().to(DEVICE)
