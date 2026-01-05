@@ -9,5 +9,6 @@ safetensors
 tqdm
 scikit-learn
 safetensors
-numpy
 huggingface_hub
+shap==0.48.0
+numpy==1.26.4
